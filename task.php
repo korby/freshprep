@@ -1,6 +1,6 @@
 <?php
 /*
- * Ce script peut être appelé en local ou à distance via http
+ * This script can be called by php cli (in console) or via http
  */
 require("vendor/autoload.php");
 
@@ -111,10 +111,10 @@ function checkDir($dirPath,$grant="is_writable"){
     }
 }
 /*
- * Teste l'ip cliente pour être sûr que le script est lancé à partir du serveur (cron) ou par un navigateur de c2is
+ * Tests client ip to be sure that script script is launched from production server itself (cron) ou from a trusted place
  */
 function isAllowedClient(){
-    $allowedIps = explode(",",_CONST_ALLOWED_DAEMON_CLIENT); // c2is
+    $allowedIps = explode(",",_CONST_ALLOWED_DAEMON_CLIENT);
     if(in_array(get_ip_address(),$allowedIps)){
         return true;
     }

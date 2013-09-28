@@ -40,23 +40,23 @@ switch($params[0])
         }
 
         $status = shell_exec($cmd);
-         // on ne passe pas par un readfile pour retourner les data à cause des limitations de mémoire de php sous apache
+         // no using readfile to return data because of memory limitation under webserver (apache...)
         header("Location: http://"._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"]."/".$rootName."/".$tmpDirectoryName."/sql/".$bdd_name.".sql.gz");
     break;
 
   case 'prod_import':
-        // on backup la bdd locale
+        // backups local database
         $cmd = sprintf('mysqldump -h%s -u%s -p%s %s | gzip -9 > %s/sql/%s.sql.gz', $bdd_host, $bdd_user, $bdd_password, $bdd_name, $tmpDirectory, $bdd_name.date("Y-m-d--H-i"));
         $status = taskExecute($cmd,"Backup de la BDD locale...");
 
-        // on importe celle de prod
+        // import production database
         $cmd = sprintf('wget "http://'._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"].'/'.$rootName.'/task.php?run=sql get_prod_export" -O %s/sql/prod.sql.gz',$tmpDirectory);
         $status = taskExecute($cmd,"Récupération de la BDD de prod...");
 
         $cmd = sprintf('gunzip < %s/sql/prod.sql.gz | /usr/bin/mysql -h %s -u %s -p%s %s', $tmpDirectory, $bdd_host, $bdd_user, $bdd_password, $bdd_name);
         $status = taskExecute($cmd,"Import de la BDD de prod dans la bd Courante...");
 
-		// on duplique la bdd de prod en spécifiant la date
+		// duplicate production database adding current date
         $cmd = sprintf('cp %s/sql/prod.sql.gz %s/sql/prod-'.date("Y-m-d--H-i").'.sql.gz ',$tmpDirectory, $tmpDirectory);
         $status = taskExecute($cmd,"Duplication du dump de la BDD de prod en spécifiant la date...");
 
