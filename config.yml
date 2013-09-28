@@ -1,0 +1,15 @@
+prod_server:
+  host: "localhost"
+  http_path: "/uppershoes"
+  trusted_ips: "127.0.0.1,::1"
+  settings_file: { type: php , path: "config/settings.inc.php" }
+  bdd:
+    bdd_host: { type: const, name: _DB_SERVER_ }
+    # bdd_port: { type: const, name: _DB_SERVER_ }
+    bdd_name: { type: const, name: _DB_NAME_ }
+    bdd_user: { type: const, name: _DB_USER_ }
+    bdd_password: { type: const, name: _DB_PASSWD_ }
+  files: /img
+
+
+
