@@ -9,23 +9,24 @@ if(!count($params))
 switch($params[0])
 {
     case 'get_prod_export':
-        $sharedDirPath = $projectRootDir.$config["prod_server"]["files"];
-        $tgzFilePath = $tmpDirectory."/shared.tgz";
-        $cmd[]  = sprintf('cd %s',$sharedDirPath);
-        $cmd[] = sprintf('tar -zcf %s ./', $tgzFilePath);
-        $status = shell_exec(implode(";",$cmd));
+        $filesLocations = implode(" ",$config["prod_server"]["files"]);
+        $tgzFilePath = $tmpDirectory."/files.tgz";
+        $cmd[] = "cd ".$projectRootDir;
+        $cmd[] = sprintf('tar -zcf %s %s', $tgzFilePath, $filesLocations);
+        $status = shell_exec(implode(";", $cmd));
         // on ne passe pas par un readfile pour retourner les data à cause des limitations de mémoire de php sous apache
-        header("Location: http://"._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"]."/".$rootName."/".$tmpDirectoryName."/shared.tgz");
+        header("Location: http://"._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"]."/".$rootName."/".$tmpDirectoryName."/files.tgz");
     break;
     case 'prod_import':
-        $projectRootDir.$config["prod_server"]["files"];
-        $tgzFilePath = $tmpDirectory."/shared.tgz";
+        $tgzFilePath = $tmpDirectory."/files.tgz";
+        $filesLocations = implode(" ",$config["prod_server"]["files"]);
 
         $cmd = sprintf('wget "http://'._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"]."/".$rootName.'/task.php?run=files get_prod_export" -O %s',$tgzFilePath);
-        $status = taskExecute($cmd,"Récupération des fichiers shared de prod...");
-
-        $cmd = sprintf('tar -zxf %s -C %s',$tgzFilePath,$sharedDirPath);
-        $status = taskExecute($cmd,"Décompression des fichiers localement...");
+        $status = taskExecute($cmd,"Downloading from production tgz archive of files ".$filesLocations);
+        echo "\nExpanding archive...";
+        $cmd[] = "cd ".$projectRootDir;
+        $cmd[] = sprintf('tar -zxf %s',$tgzFilePath);
+        $status = shell_exec(implode(";", $cmd));
 
     break;
 

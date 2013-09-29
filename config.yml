@@ -10,8 +10,7 @@ prod_server:
     bdd_name: { type: const, name: _DB_NAME_ }
     bdd_user: { type: const, name: _DB_USER_ }
     bdd_password: { type: const, name: _DB_PASSWD_ }
-  # with first slash
-  files: /img
+  files: [ img, upload ]
 
 
 
