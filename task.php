@@ -17,7 +17,10 @@ checkDir($tmpDirectory);
 $config = Yaml::parse($rootDir."/config.yml");
 
 if ($config["prod_server"]["settings_file"]["type"] == "php") {
-	require($projectRootDir."/".$config["prod_server"]["settings_file"]["path"]);
+    if (file_exists($projectRootDir."/".$config["prod_server"]["settings_file"]["path"])) {
+        require($projectRootDir."/".$config["prod_server"]["settings_file"]["path"]);
+    }
+
 }
 // var_dump($config);
 
@@ -135,3 +138,4 @@ function get_ip_address() {
         }
     }
 }
+
