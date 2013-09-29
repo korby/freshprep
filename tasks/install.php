@@ -13,21 +13,13 @@ if (! in_array("ssh2", $modsAvailable)) {
 $strServerPort = "22";
 
 
-echo 'Enter the remote sftp host:';
-$strServer = stream_get_line(STDIN, 1024, PHP_EOL);
-
-printf('Enter the remote sftp port (default %s):', $strServerPort);
-$strServerPortGiven = stream_get_line(STDIN, 1024, PHP_EOL);
-$strServerPort = ($strServerPortGiven != "")?$strServerPortGiven:$strServerPort;
-
-echo 'Enter the remote root path (/var/www/myproject/ for example):';
-$strServerRootPath = stream_get_line(STDIN, 1024, PHP_EOL);
-
-echo 'Enter the sftp user name:';
-$strServerUsername = stream_get_line(STDIN, 1024, PHP_EOL);
-
-echo 'Enter the sftp user password:';
-$strServerPassword = stream_get_line(STDIN, 1024, PHP_EOL);
+$strServer = ask('Enter the remote sftp host:', false, array(FILTER_VALIDATE_IP, "`[a-z]+\.[a-z]*$`"), "or");
+$strServerPortGiven = ask(sprintf('Enter the remote sftp port (default %s):', $strServerPort), true, "`^[0-9]*$`");
+$strServerPort = ($strServerPortGiven != "")? $strServerPortGiven : $strServerPort;
+$strServerRootPath = ask('Enter the remote root path (/var/www/myproject/ for example):', false, "`^/.*/$`");
+$strServerUsername = ask('Enter the sftp user name:');
+$strServerPassword = ask('Enter the sftp user password:');
+$strServerRootPath .= "freshprep/";
 
 //connect to server
 $resConnection = ssh2_connect($strServer, $strServerPort);
@@ -43,13 +35,8 @@ if(ssh2_auth_password($resConnection, $strServerUsername, $strServerPassword)){
 dirmk($sftpStream, "");
 $ignore = array(".git", ".idea");
 uploadDir(".", $sftpStream);
+echo "\n";
 
-
-/*
-put($sftpStream, "task.php");
-put($sftpStream, "config.yml");
-dirmk($sftpStream, "data");
-*/
 
 function get($sftpStream, $RemoteFilePath) {
     return file_get_contents("ssh2.sftp://{$sftpStream}{$RemoteFilePath}", 'r');
@@ -81,13 +68,11 @@ function uploadDir($dirPath, $sftpStream)
 
         if(is_dir($dirPath.'/'.$fichier))
         {
-            print "\n".$dirPath."/".$fichier;
             dirmk($sftpStream, $dirPath.'/'.$fichier);
             uploadDir($dirPath.'/'.$fichier, $sftpStream);
         }
         else
         {
-            echo "\nSending ".$dirPath."/".$fichier;
             put($sftpStream, $dirPath."/".$fichier);
         }
 

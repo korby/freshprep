@@ -139,3 +139,82 @@ function get_ip_address() {
     }
 }
 
+function ask($question, $emptyOk = false, $validationFilter = null, $cond = "and")
+{
+    print $question . ' ';
+
+    $rtn    = '';
+    $stdin     = fopen('php://stdin', 'r');
+    $rtn = fgets($stdin);
+    fclose($stdin);
+
+    $rtn = trim($rtn);
+
+    if (!$emptyOk && empty($rtn)) {
+        $rtn = ask($question, $emptyOk, $validationFilter);
+    } elseif ($validationFilter != null  && ! empty($rtn)) {
+        if (! controlFormat($rtn, $validationFilter, $statusMessage, $cond)) {
+            print $statusMessage;
+            $rtn = ask($question, $emptyOk, $validationFilter, $cond);
+        }
+    }
+
+    return $rtn;
+}
+
+function controlFormat($valueToInspect,$filter, &$statusMessage, $cond = "and")
+{
+    $filters = !(is_array($filter))? array($filter) : $filter;
+    $statusMessage = '';
+    $oneFalse = false;
+    $oneTrue = false;
+    $options = array();
+
+    foreach ($filters as $filter) {
+        if (! is_int($filter)) {
+            $regexp = $filter;
+            $filter = FILTER_VALIDATE_REGEXP;
+            $options = array(
+                'options' => array(
+                    'regexp' => $regexp,
+                )
+            );
+        }
+        if (! filter_var($valueToInspect, $filter, $options)) {
+            $oneFalse = true;
+            switch ($filter)
+            {
+                case FILTER_VALIDATE_URL :
+                    $statusMessage .= "Don't match url format." . PHP_EOL;
+                    break;
+                case FILTER_VALIDATE_EMAIL :
+                    $statusMessage .= "Don't match e-mail format." . PHP_EOL;
+                    break;
+                case FILTER_VALIDATE_REGEXP :
+                    $statusMessage .= "Don't match regexp ".$regexp." format." . PHP_EOL;
+                    break;
+                case FILTER_VALIDATE_IP :
+                    $statusMessage .= "Don't match IP format." . PHP_EOL;
+                    break;
+            }
+        } else {
+            $oneTrue = true;
+        }
+    }
+    if ($cond == "and") {
+        if ($oneFalse) {
+            return false;
+        } else {
+            return true;
+        }
+
+    } elseif($cond == "or") {
+        if ($oneTrue) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    return false;
+}
+
