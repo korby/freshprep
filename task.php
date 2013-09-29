@@ -78,6 +78,11 @@ require_once($task);
 
 exit($status);
 
+
+/***********************************
+ ************ Functions ************
+ ***********************************/
+
 function taskExecute($cmd,$notice = "")
 {
   global $outpuStr; global $outpuStrRes;

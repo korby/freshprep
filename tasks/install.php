@@ -11,8 +11,6 @@ if (! in_array("ssh2", $modsAvailable)) {
 }
 
 $strServerPort = "22";
-
-
 $strServer = ask('Enter the remote sftp host:', false, array(FILTER_VALIDATE_IP, "`[a-z]+\.[a-z]*$`"), "or");
 $strServerPortGiven = ask(sprintf('Enter the remote sftp port (default %s):', $strServerPort), true, "`^[0-9]*$`");
 $strServerPort = ($strServerPortGiven != "")? $strServerPortGiven : $strServerPort;
@@ -21,7 +19,7 @@ $strServerUsername = ask('Enter the sftp user name:');
 $strServerPassword = ask('Enter the sftp user password:');
 $strServerRootPath .= "freshprep/";
 
-//connect to server
+echo "\nConnecting to server...";
 $resConnection = ssh2_connect($strServer, $strServerPort);
 
 if(ssh2_auth_password($resConnection, $strServerUsername, $strServerPassword)){
@@ -32,6 +30,7 @@ if(ssh2_auth_password($resConnection, $strServerUsername, $strServerPassword)){
     exit;
 }
 
+echo "\nBeginning file transfer to server...";
 dirmk($sftpStream, "");
 $ignore = array(".git", ".idea");
 uploadDir(".", $sftpStream);
