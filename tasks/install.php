@@ -1,5 +1,11 @@
 <?php
 
+if($params[0] == "help")
+{
+    help();
+    exit;
+}
+
 $modsAvailable = explode("\n", shell_exec("php -m"));
 if (! in_array("openssl", $modsAvailable)) {
     echo "Module openssl missing, please install it";
@@ -82,3 +88,8 @@ function uploadDir($dirPath, $sftpStream)
     closedir($buffer);
 }
 
+function help()
+{
+    echo "No argument needed for this command. It installs freshprep on the remote production server\n";
+    echo "You will be prompted to give sFtp's connection parameters\n";
+}

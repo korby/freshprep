@@ -52,8 +52,8 @@ elseif(count($_SERVER['argv']) > 1){
 }
 if(count($_SERVER['argv']) <= 1 && !$_GET["run"])
 {
-  echo "No task selected\n";
-  exit(1);
+  echo "No task selected, you can execute these commands to have an overview\n";
+  $args1 = "help";
 }
 
 $task = sprintf('%s/%s', $tasksDir, $args1);
