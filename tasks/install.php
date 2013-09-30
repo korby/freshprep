@@ -26,7 +26,8 @@ $strServerPassword = ask('Enter the sftp user password:');
 $strServerRootPath .= "freshprep/";
 
 echo "\nConnecting to server...";
-$resConnection = ssh2_connect($strServer, $strServerPort);
+$callbacks = array('disconnect' => 'ssh_disconnect');
+$resConnection = ssh2_connect($strServer, $strServerPort, null, $callbacks);
 
 if(ssh2_auth_password($resConnection, $strServerUsername, $strServerPassword)){
     //Initialize SFTP subsystem
@@ -51,7 +52,7 @@ function get($sftpStream, $RemoteFilePath) {
 function put($sftpStream, $filePath) {
     global $rootDir;
     global $strServerRootPath;
-    echo "\nSending {$rootDir}"/"{$filePath} to {$rootDir}{$filePath}";
+
 
     return file_put_contents("ssh2.sftp://{$sftpStream}{$strServerRootPath}{$filePath}", $rootDir."/".file_get_contents($filePath));
 }
@@ -66,6 +67,7 @@ function dirmk($sftpStream, $dirPath) {
 function uploadDir($dirPath, $sftpStream)
 {
     global $ignore;
+    global $rootDir;
     $buffer = opendir($dirPath) or die("Erreur le repertoire $dirPath existe pas");
     while($fichier = @readdir($buffer))
     {
@@ -75,11 +77,16 @@ function uploadDir($dirPath, $sftpStream)
         if(is_dir($dirPath.'/'.$fichier))
         {
             dirmk($sftpStream, $dirPath.'/'.$fichier);
-            uploadDir($dirPath.'/'.$fichier, $sftpStream);
+            if (!uploadDir($dirPath.'/'.$fichier, $sftpStream)) {
+                distError();
+            }
         }
         else
         {
-            put($sftpStream, $dirPath."/".$fichier);
+            echo "\nSending ".$rootDir."/".$dirPath."/".$fichier;
+            if (!put($sftpStream, $dirPath."/".$fichier)) {
+                distError();
+            }
         }
 
 
@@ -87,6 +94,15 @@ function uploadDir($dirPath, $sftpStream)
     }
 
     closedir($buffer);
+}
+function distError() {
+    echo "Action failed, process will be killed\n";
+    echo "Are you sure the protocol and auth are the rights ?\n";
+    die();
+}
+function ssh_disconnect($reason, $message) {
+    printf("Server disconnected with reason code [%d] and message: %s\n",
+        $reason, $message);
 }
 
 function help()
