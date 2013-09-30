@@ -20,7 +20,7 @@ $strServerPort = "22";
 $strServer = ask('Enter the remote sftp host:', false, array(FILTER_VALIDATE_IP, "`[a-z]+\.[a-z]*$`"), "or");
 $strServerPortGiven = ask(sprintf('Enter the remote sftp port (default %s):', $strServerPort), true, "`^[0-9]*$`");
 $strServerPort = ($strServerPortGiven != "")? $strServerPortGiven : $strServerPort;
-$strServerRootPath = ask('Enter the remote root path (/var/www/myproject/ for example):', false, "`^/.*/$`");
+$strServerRootPath = ask('Enter the remote root path (/var/www/myproject/ for example):', false, "`^/(.*/)*$`");
 $strServerUsername = ask('Enter the sftp user name:');
 $strServerPassword = ask('Enter the sftp user password:');
 $strServerRootPath .= "freshprep/";
@@ -39,6 +39,7 @@ if(ssh2_auth_password($resConnection, $strServerUsername, $strServerPassword)){
 echo "\nBeginning file transfer to server...";
 dirmk($sftpStream, "");
 $ignore = array(".git", ".idea");
+chdir($rootDir);
 uploadDir(".", $sftpStream);
 echo "\n";
 
