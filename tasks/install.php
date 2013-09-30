@@ -15,56 +15,72 @@ if (! in_array("ssh2", $modsAvailable)) {
     echo "Module openssl missing, please install it";
     exit;
 }
-
-$strServerPort = "22";
-$strServer = ask('Enter the remote sftp host:', false, array(FILTER_VALIDATE_IP, "`[a-z]+\.[a-z]*$`"), "or");
-$strServerPortGiven = ask(sprintf('Enter the remote sftp port (default %s):', $strServerPort), true, "`^[0-9]*$`");
-$strServerPort = ($strServerPortGiven != "")? $strServerPortGiven : $strServerPort;
-$strServerRootPath = ask('Enter the remote root path (/var/www/myproject/ for example):', false, "`^/(.*/)*$`");
-$strServerUsername = ask('Enter the sftp user name:');
-$strServerPassword = ask('Enter the sftp user password:');
-$strServerRootPath .= "freshprep/";
-
-echo "\nConnecting to server...";
-$callbacks = array('disconnect' => 'ssh_disconnect');
-$resConnection = ssh2_connect($strServer, $strServerPort, null, $callbacks);
-
-if(ssh2_auth_password($resConnection, $strServerUsername, $strServerPassword)){
-    //Initialize SFTP subsystem
-    $sftpStream = ssh2_sftp($resConnection);
-} else{
-    echo "Unable to authenticate on server";
+if (! in_array("ftp", $modsAvailable)) {
+    echo "Module tp missing, please install it";
     exit;
 }
 
+
+$strProtocol = "sftp";
+$strProtocolGiven  = ask(sprintf('Enter the transfert protocol, sftp or ftp (default %s):', $strProtocol), true, "`(sftp|ftp)`");
+$strProtocol = ($strProtocolGiven != "")? $strProtocolGiven : $strProtocol;
+if($strProtocol == "sftp") {
+    $strServerPort = "22";
+} else if($strProtocol == "ftp") {
+    $strServerPort = "21";
+}
+$strServer = ask('Enter the remote '.$strProtocol.' host:', false, array(FILTER_VALIDATE_IP, "`[a-z]+\.[a-z]*$`"), "or");
+$strServerPortGiven = ask(sprintf('Enter the remote '.$strProtocol.' port (default %s):', $strServerPort), true, "`^[0-9]*$`");
+$strServerPort = ($strServerPortGiven != "")? $strServerPortGiven : $strServerPort;
+$strServerRootPath = ask('Enter the remote root path (/var/www/myproject/ for example):', false, "`^/(.*/)*$`");
+$strServerUsername = ask('Enter the '.$strProtocol.' user name:');
+$strServerPassword = ask('Enter the '.$strProtocol.' user password:');
+$strServerRootPath .= "freshprep/";
+
+echo "\nConnecting to server...";
+$stream = connectAndAuth();
+
 echo "\nBeginning file transfer to server...";
-dirmk($sftpStream, "");
-$ignore = array(".git", ".idea");
+dirmk($stream, "");
+$ignore = array(".git", ".idea", "data");
+if (strpos($rootDir,"freshprep") === false) {
+    echo "Path problem, no 'freshprep' occurence within... exiting.";
+    exit;
+}
 chdir($rootDir);
-uploadDir(".", $sftpStream);
+
+uploadDir(".", $stream);
 echo "\n";
 
+function connectAndAuth() {
+    global $strProtocol;
+    global $strServer;
+    global $strServerPort;
+    global $strServerUsername;
+    global $strServerPassword;
 
-function get($sftpStream, $RemoteFilePath) {
-    return file_get_contents("ssh2.sftp://{$sftpStream}{$RemoteFilePath}", 'r');
+    if($strProtocol == "sftp") {
+        $callbacks = array('disconnect' => 'ssh_disconnect');
+        $resConnection = ssh2_connect($strServer, $strServerPort, null, $callbacks);
+
+        if(ssh2_auth_password($resConnection, $strServerUsername, $strServerPassword)){
+            //Initialize SFTP subsystem
+            $stream = ssh2_sftp($resConnection);
+        } else{
+            echo "Unable to authenticate on server";
+            exit;
+        }
+    } elseif($strProtocol == "ftp") {
+        $stream =  ftp_connect($strServer, $strServerPort);
+        if(! ftp_login($stream, $strServerUsername, $strServerPassword)) {
+            echo "Unable to authenticate on server";
+            exit;
+        }
+    }
+
+    return $stream;
 }
-
-function put($sftpStream, $filePath) {
-    global $rootDir;
-    global $strServerRootPath;
-
-
-    return file_put_contents("ssh2.sftp://{$sftpStream}{$strServerRootPath}{$filePath}", $rootDir."/".file_get_contents($filePath));
-}
-function dirmk($sftpStream, $dirPath) {
-    global $strServerRootPath;
-    echo "\nCreating directory ".$strServerRootPath.$dirPath;
-    ssh2_sftp_mkdir($sftpStream, $strServerRootPath.$dirPath, 0777);
-    return ssh2_sftp_chmod ( $sftpStream , $strServerRootPath.$dirPath, 0777 );
-}
-
-
-function uploadDir($dirPath, $sftpStream)
+function uploadDir($dirPath, $stream)
 {
     global $ignore;
     global $rootDir;
@@ -76,25 +92,61 @@ function uploadDir($dirPath, $sftpStream)
 
         if(is_dir($dirPath.'/'.$fichier))
         {
-            dirmk($sftpStream, $dirPath.'/'.$fichier);
-            if (!uploadDir($dirPath.'/'.$fichier, $sftpStream)) {
+            if (!dirmk($stream, $dirPath.'/'.$fichier)) {
                 distError();
             }
+            uploadDir($dirPath.'/'.$fichier, $stream);
         }
         else
         {
             echo "\nSending ".$rootDir."/".$dirPath."/".$fichier;
-            if (!put($sftpStream, $dirPath."/".$fichier)) {
+            if (!put($stream, $dirPath."/".$fichier)) {
                 distError();
             }
         }
-
-
 
     }
 
     closedir($buffer);
 }
+
+function get($stream, $RemoteFilePath) {
+    global $strProtocol;
+    return file_get_contents("ssh2.sftp://{$stream}{$RemoteFilePath}", 'r');
+}
+
+function put($stream, $filePath) {
+    global $strProtocol;
+    global $rootDir;
+    global $strServerRootPath;
+
+    if($strProtocol == "sftp") {
+        return file_put_contents("ssh2.sftp://{$stream}{$strServerRootPath}{$filePath}", file_get_contents($rootDir."/".$filePath));
+    } elseif($strProtocol == "ftp") {
+        return ftp_fput($stream, $strServerRootPath.$filePath, fopen($rootDir."/".$filePath, "r"), FTP_BINARY);
+    }
+
+
+}
+function dirmk($stream, $dirPath) {
+    global $strProtocol;
+    global $strServerRootPath;
+    echo "\nCreating directory ".$strServerRootPath.$dirPath;
+
+    if($strProtocol == "sftp") {
+        ssh2_sftp_mkdir($stream, $strServerRootPath.$dirPath, 0777);
+
+        return ssh2_sftp_chmod ( $stream , $strServerRootPath.$dirPath, 0777 );
+    } elseif($strProtocol == "ftp") {
+        ftp_mkdir($stream, $strServerRootPath.$dirPath);
+
+        return ftp_chmod($stream, 0777, $strServerRootPath.$dirPath);
+    }
+
+}
+
+
+
 function distError() {
     echo "Action failed, process will be killed\n";
     echo "Are you sure the protocol and auth are the rights ?\n";
