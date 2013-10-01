@@ -1,8 +1,8 @@
 prod_server:
   host: "localhost"
   # with first slash but no end slash
-  http_path: "/uppershoes"
-  trusted_ips: "127.0.0.1,::1"
+  http_path: "/"
+  trusted_ips: "127.0.0.1,::1i,79.174.228.158,82.228.197.89,46.218.50.230"
   settings_file: { type: php , path: "config/settings.inc.php" }
   bdd:
     bdd_host: { type: const, name: _DB_SERVER_ }
