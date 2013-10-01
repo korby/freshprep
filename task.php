@@ -2,9 +2,8 @@
 /*
  * This script can be called by php cli (in console) or via http
  */
-require("vendor/autoload.php");
 
-use Symfony\Component\Yaml\Yaml;
+
 
 $rootDir = __DIR__;
 $rootName = basename(realpath(__DIR__));
@@ -12,6 +11,7 @@ $projectRootDir = realpath(__DIR__."/../");
 $tasksDir = $rootDir.'/tasks';
 $tmpDirectoryName = "data";
 $tmpDirectory = $rootDir.'/'.$tmpDirectoryName;
+
 checkDir($tmpDirectory);
 
 $config = Yaml::parse($rootDir."/config.yml");
@@ -22,11 +22,8 @@ if ($config["prod_server"]["settings_file"]["type"] == "php") {
     }
 
 }
-// var_dump($config);
-
 define("_CONST_ALLOWED_DAEMON_CLIENT",$config["prod_server"]["trusted_ips"]);
 define("_CONST_PROD_DOMAIN",$config["prod_server"]["host"]);
-
 
 error_reporting(E_ERROR);
 
@@ -63,7 +60,15 @@ if(!is_file($task))
   echo "Unknown task : $task\n";
   exit(1);
 }
-
+if ("localhost" != _CONST_PROD_DOMAIN && $args1 != "install") {
+    $pingRes = file_get_contents("http://"._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"]."/".$rootName."/task.php?run=ping");
+    if($pingRes != "Freshprep is here") {
+        echo "************************************************************\n";
+        echo "*** Freshprep has'nt been installed on production server ***\n";
+        echo "***         Run task install to perform it               ***\n";
+        echo "************************************************************\n";
+    }
+}
 if(isset($_GET["run"]) && isAllowedClient()){
     $runCommands = explode(" ",$_GET["run"]);
     $params = array_slice($runCommands, 1);
