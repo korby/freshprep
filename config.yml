@@ -1,5 +1,5 @@
 prod_server:
-  host: "www.google.fr"
+  host: "www.google.frqsdsqd"
   # with first slash but no end slash
   http_path: "/"
   trusted_ips: "127.0.0.1,::1,79.174.228.158,82.228.197.89,46.218.50.230"

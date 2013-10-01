@@ -4,21 +4,29 @@
  */
 
 
-
-$rootDir = __DIR__;
-$rootName = basename(realpath(__DIR__));
-$projectRootDir = realpath(__DIR__."/../");
+// __DIR__ not used for php4 compatibility
+$rootDir = dirname(__FILE__);
+$rootName = basename(realpath($rootDir));
+$projectRootDir = realpath($rootDir."/../");
 $tasksDir = $rootDir.'/tasks';
 $tmpDirectoryName = "data";
 $tmpDirectory = $rootDir.'/'.$tmpDirectoryName;
 
 checkDir($tmpDirectory);
 
-$config = Yaml::parse($rootDir."/config.yml");
+//php4 compatibility
+if(!file_exists($rootDir."/config.srl") || (filemtime($rootDir."/config.srl") < filemtime($rootDir."/config.yml"))) {
+    require($rootDir."/php5.php");
+    file_put_contents($rootDir."/config.srl", serialize($config));
+} else {
+    $config = unserialize(file_get_contents($rootDir."/config.srl"));
+}
 
 if ($config["prod_server"]["settings_file"]["type"] == "php") {
     if (file_exists($projectRootDir."/".$config["prod_server"]["settings_file"]["path"])) {
         require($projectRootDir."/".$config["prod_server"]["settings_file"]["path"]);
+    } else {
+        echo "File doesn't exist : ".$projectRootDir."/".$config["prod_server"]["settings_file"]["path"]."\n";
     }
 
 }
@@ -60,15 +68,19 @@ if(!is_file($task))
   echo "Unknown task : $task\n";
   exit(1);
 }
-if ("localhost" != _CONST_PROD_DOMAIN && $args1 != "install") {
-    $pingRes = file_get_contents("http://"._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"]."/".$rootName."/task.php?run=ping");
-    if($pingRes != "Freshprep is here") {
-        echo "************************************************************\n";
-        echo "*** Freshprep has'nt been installed on production server ***\n";
-        echo "***         Run task install to perform it               ***\n";
-        echo "************************************************************\n";
+
+if ($args1 != "install") {
+    if (! isset($_SERVER["HTTP_HOST"]) && _CONST_PROD_DOMAIN != "localhost") {
+        $pingRes = file_get_contents("http://"._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"]."/".$rootName."/task.php?run=ping");
+        if($pingRes != "Freshprep is here") {
+            echo "************************************************************\n";
+            echo "*** Freshprep has'nt been installed on production server ***\n";
+            echo "***         Run task install to perform it               ***\n";
+            echo "************************************************************\n";
+        }
     }
 }
+
 if(isset($_GET["run"]) && isAllowedClient()){
     $runCommands = explode(" ",$_GET["run"]);
     $params = array_slice($runCommands, 1);

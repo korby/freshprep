@@ -45,15 +45,35 @@ switch($params[0])
     break;
 
   case 'prod_import':
+        $confirm = ask(sprintf("Production database will be imported in %s -> %s, continue ? [y]: ", $bdd_host, $bdd_name), true);
+        if($confirm != "y") {
+            echo "exiting...";
+            exit;
+        }
+
+        checkDir($tmpDirectory."/sql/");
+
         // backups local database
-        $cmd = sprintf('mysqldump -h%s -u%s -p%s %s | gzip -9 > %s/sql/%s.sql.gz', $bdd_host, $bdd_user, $bdd_password, $bdd_name, $tmpDirectory, $bdd_name.date("Y-m-d--H-i"));
+        if ($bdd_password != "") {
+             $cmd = sprintf('mysqldump -h%s -u%s -p%s %s | gzip -9 > %s/sql/%s.sql.gz', $bdd_host, $bdd_user, $bdd_password, $bdd_name, $tmpDirectory, $bdd_name.date("Y-m-d--H-i"));
+        } else {
+             $cmd = sprintf('mysqldump -h%s -u%s %s | gzip -9 > %s/sql/%s.sql.gz', $bdd_host, $bdd_user, $bdd_name, $tmpDirectory, $bdd_name.date("Y-m-d--H-i"));
+        }
+
+
         $status = taskExecute($cmd,"Backup de la BDD locale...");
 
         // import production database
         $cmd = sprintf('wget "http://'._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"].'/'.$rootName.'/task.php?run=sql get_prod_export" -O %s/sql/prod.sql.gz',$tmpDirectory);
         $status = taskExecute($cmd,"Récupération de la BDD de prod...");
 
-        $cmd = sprintf('gunzip < %s/sql/prod.sql.gz | /usr/bin/mysql -h %s -u %s -p%s %s', $tmpDirectory, $bdd_host, $bdd_user, $bdd_password, $bdd_name);
+        // backups local database
+        if ($bdd_password != "") {
+          $cmd = sprintf('gunzip < %s/sql/prod.sql.gz | mysql -h %s -u %s -p%s %s', $tmpDirectory, $bdd_host, $bdd_user, $bdd_password, $bdd_name);
+        } else {
+          $cmd = sprintf('gunzip < %s/sql/prod.sql.gz | mysql -h %s -u %s %s', $tmpDirectory, $bdd_host, $bdd_user, $bdd_name);
+        }
+
         $status = taskExecute($cmd,"Import de la BDD de prod dans la bd Courante...");
 
 		// duplicate production database adding current date
