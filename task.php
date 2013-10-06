@@ -66,7 +66,20 @@ if ($args1 != "install") {
     // proceed include here and not if the install task is called because of bug which could appear on stream used by install task.
     if ($config["prod_server"]["settings_file"]["type"] == "php") {
         if (file_exists($projectRootDir."/".$config["prod_server"]["settings_file"]["path"])) {
-            require($projectRootDir."/".$config["prod_server"]["settings_file"]["path"]);
+            $confCnt = file_get_contents($projectRootDir."/".$config["prod_server"]["settings_file"]["path"]);
+            $confCnt = explode("\n", $confCnt);
+
+            $config["prod_server"]["bdd"]["bdd_host"]["name"];
+            foreach($config["prod_server"]["bdd"] as $confs => $sub) {
+                $names[] = $sub["name"];
+            }
+
+            foreach($confCnt as $line) {
+                if(preg_match("`[^#a-zA-Z]*(".implode("|", $names).")`", $line)) {
+                    $toEval[] =  $line;
+                }
+            }
+            eval(implode("\n", $toEval));
         } else {
             echo "File doesn't exist : ".$projectRootDir."/".$config["prod_server"]["settings_file"]["path"]."\n";
         }
