@@ -22,14 +22,7 @@ if(!file_exists($rootDir."/config.srl") || (filemtime($rootDir."/config.srl") < 
     $config = unserialize(file_get_contents($rootDir."/config.srl"));
 }
 
-if ($config["prod_server"]["settings_file"]["type"] == "php") {
-    if (file_exists($projectRootDir."/".$config["prod_server"]["settings_file"]["path"])) {
-        require($projectRootDir."/".$config["prod_server"]["settings_file"]["path"]);
-    } else {
-        echo "File doesn't exist : ".$projectRootDir."/".$config["prod_server"]["settings_file"]["path"]."\n";
-    }
 
-}
 define("_CONST_ALLOWED_DAEMON_CLIENT",$config["prod_server"]["trusted_ips"]);
 define("_CONST_PROD_DOMAIN",$config["prod_server"]["host"]);
 
@@ -70,6 +63,15 @@ if(!is_file($task))
 }
 
 if ($args1 != "install") {
+    // proceed include here and not if the install task is called because of bug which could appear on stream used by install task.
+    if ($config["prod_server"]["settings_file"]["type"] == "php") {
+        if (file_exists($projectRootDir."/".$config["prod_server"]["settings_file"]["path"])) {
+            require($projectRootDir."/".$config["prod_server"]["settings_file"]["path"]);
+        } else {
+            echo "File doesn't exist : ".$projectRootDir."/".$config["prod_server"]["settings_file"]["path"]."\n";
+        }
+
+    }
     if (! isset($_SERVER["HTTP_HOST"]) && _CONST_PROD_DOMAIN != "localhost") {
         $pingRes = file_get_contents("http://"._CONST_PROD_DOMAIN.$config["prod_server"]["http_path"]."/".$rootName."/task.php?run=ping");
         if($pingRes != "Freshprep is here") {
@@ -90,7 +92,6 @@ else{
 }
 
 $status = 0;
-
 require_once($task);
 
 exit($status);
@@ -164,7 +165,6 @@ function get_ip_address() {
 function ask($question, $emptyOk = false, $validationFilter = null, $cond = "and")
 {
     print $question . ' ';
-
     $rtn    = '';
     $stdin     = fopen('php://stdin', 'r');
     $rtn = fgets($stdin);

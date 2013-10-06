@@ -37,9 +37,9 @@ switch($params[0])
 
         // here we do not use shell command because of settings which can forbid it on the remote server
         if ($bdd_password != "") {
-            file_put_contents($filePath, gzencode(mysqldump($bdd_host, $bdd_user, $bdd_password, $bdd_name), 9));
-        } else {
             file_put_contents($filePath, gzencode(mysqldump($bdd_host, $bdd_user, $bdd_name), 9));
+        } else {
+            file_put_contents($filePath, gzencode(mysqldump($bdd_host, $bdd_user, $bdd_password, $bdd_name), 9));
         }
 
         // don't use readfile because of memory limitation under webserver (apache...)
